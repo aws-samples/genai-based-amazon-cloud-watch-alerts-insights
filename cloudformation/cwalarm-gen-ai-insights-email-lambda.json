@@ -1,0 +1,240 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template for GenAI based CloudWatch alarm Insight in email notification",
+    "Transform": "AWS::Serverless-2016-10-31",
+    "Parameters": {
+        "pS3DeploymentBucket": {
+            "Type": "String",
+            "Description": "S3 bucket that contains Lambda zip package"
+        },
+        "pS3DeploymentKey": {
+            "Type": "String",
+            "Description": "S3 key of the Lambda zip package"
+        },
+        "pEmailSource": {
+            "Type": "String",
+            "Description": "Sender email address. Should be a verified identity in SES"
+        },
+        "pEmailToAddress": {
+            "Type": "String",
+            "Description": "Receiver (To:) email address"
+        }
+        
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "AWS Lambda Configuration"
+                    },
+                    "Parameters": [
+                        "pS3DeploymentBucket",
+                        "pS3DeploymentKey"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Amazon SES Configuration"
+                    },
+                    "Parameters": [
+                        "pEmailSource",
+                        "pEmailToAddress",
+                        "pEmailCcAddress",
+                        "pEmailReplyToAddress"
+                    ]
+                }
+            ],
+            "ParameterLabels": {}
+        }
+    },
+    "Resources": {
+        "rGenAIInsightEmailLambdaFunction": {
+            "Type": "AWS::Serverless::Function",
+            "Properties": {
+                "Handler": "cwalarm-gen-ai-insights-email-lambda.lambda_handler",
+                "Runtime": "python3.12",
+                "Description": "Generate GenAI based insights from CloudWatch alarms  for email notification",
+                "Environment": {
+                    "Variables": {
+                        "EMAIL_SOURCE": {
+                            "Ref": "pEmailSource"
+                        },
+                        "EMAIL_TO_ADDRESSES": {
+                            "Ref": "pEmailToAddress"
+                        },
+
+                        "MODEL_ID":"anthropic.claude-3-haiku-20240307-v1:0",
+
+                        "SES_TEMPLATE": "<html><body><h2><span style='color: #d13212;'>&#9888</span>{{AlertTitle}}</h2><table style='height: 245px; width: 70%; border-collapse: collapse;' border='1' cellspacing='70' cellpadding='5'><tbody><tr style='height: 45px;'><td style='width: 22.6262%; background-color: #f2f3f3; height: 45px;'><span style='color: #16191f;'><strong>Impact</strong></span></td><td style='width: 60.5228%; background-color: #ffffff; height: 45px;'><strong><span style='color: #d13212;'>Critical</span></strong></td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Alarm Name</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{alarm}}</td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Account</strong></span></td><td style='width: 60.5228%; height: 45px;'><p>{{account}} {{region}})</p></td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Resource</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{Resource}}</td></tr><tr style='height: 45px;'><td style='width: 22.6262%; background-color: #f2f3f3; height: 45px;'><span style='color: #16191f;'><strong>Date-Time</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{datetime}}</td></tr><tr style='height: 45px;'><td style='width: 22.6262%; background-color: #f2f3f3; height: 45px;'><span style='color: #16191f;'><strong>Status</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{AlarmStatus}}</td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Reason</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{AlarmReason}} </td></tr> <tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Issue</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{Issue}} </td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>Impact</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{Impact}} </td></tr><tr style='height: 45px;'><td style='width: 22.6262%; height: 45px; background-color: #f2f3f3;'><span style='color: #16191f;'><strong>AI Generated Recommendations</strong></span></td><td style='width: 60.5228%; height: 45px;'>{{Recommendations}} </td></tr></tbody></table></body></html>",
+                        
+                        "PROMPT":"Take your time to Carefully Analyze Cloud Watch Alert <CurrentAlertMessage> and also correlate with Historical Alerts <AlertHistory> to get better insight and generate crisp recommendation for email in HTML format: <EmailTemplate>  skip preamble and generate on HTML BODY in Response"
+                    }
+                },
+                "CodeUri": {
+                    "Bucket": {
+                        "Ref": "pS3DeploymentBucket"
+                    },
+                    "Key": {
+                        "Ref": "pS3DeploymentKey"
+                        }
+                },
+                "Timeout": 120,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "rFunctionRole",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "rFunctionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "Lambda_Permissions_SES_Bedrock_Alarm",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ses:SendEmail",
+                                        "ses:SendTemplatedEmail",
+                                        "ses:SendRawEmail"
+                                    ],
+                                    "Resource":{
+                                        "Fn::Sub": "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/*"
+
+                                    }                                     
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                      "bedrock:ListFoundationModels"
+                                    ],
+                                    "Resource": [
+                                       "*"
+                                    ]
+                                  },
+                                  {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                      "bedrock:InvokeModel"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/*"
+                                     
+                                    }
+                                  },
+                                  {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                      "cloudwatch:DescribeAlarmHistory"
+                                    ],
+                                    "Resource": "*"
+                                  }
+                            ]
+                        }
+                    },
+                    {
+                        "PolicyName": "Lambda_Permissions_CWLogs",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "logs:DescribeLogGroups"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+                                    }                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "rLambdaFunctionPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "rGenAIInsightEmailLambdaFunction",
+                        "Arn"
+                    ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "sns.amazonaws.com",
+                "SourceArn": {
+                    "Ref": "rCwAlarmSns"
+                }
+            }
+        },
+        "rCwAlarmSns": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Protocol": "lambda",
+                        "Endpoint": {
+                            "Fn::GetAtt": [
+                                "rGenAIInsightEmailLambdaFunction",
+                                "Arn"
+                            ]
+                        }
+                    }
+                ]
+                        }
+        },
+        "rCwAlarmSnsPolicy": {
+            "Type": "AWS::SNS::TopicPolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "cloudwatch.amazonaws.com"
+                                ] 
+                            },
+                            "Action": "SNS:Publish",
+                            "Resource": [
+                                {
+                                    "Ref": "rCwAlarmSns"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Topics": [
+                    {
+                        "Ref": "rCwAlarmSns"
+                    }
+                ]
+            }
+        }
+    }
+}
