@@ -99,6 +99,7 @@ To modify the email appearance or content:
 # FAQ
 
 Q: How does this differ from standard CloudWatch alarm notifications?
+
 A: This solution provides AI-generated insights, historical context, and actionable recommendations in addition to the standard alarm information.
 
 Q: Can I use a different AI model?
