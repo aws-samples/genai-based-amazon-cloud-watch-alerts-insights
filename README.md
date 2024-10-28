@@ -1,6 +1,6 @@
-# Generate GenAI Based Insights from CloudWatch alarms for email notifications using Amazon Bedrock
+# Generate GenAI Based Insights from Amazon CloudWatch alarms for email notifications using Amazon Bedrock
 
-This solution enables you to enhance CloudWatch alarm email alerts using Amazon Bedrock and Anthropic Gen AI Models. It extracts relevant information from alarm messages, analyzes historical data, and provides AI-generated insights and recommendations in an easy-to-read HTML format.
+This solution enables you to enhance Amazon CloudWatch alarm email alerts using Amazon Bedrock and Anthropic Gen AI Models. It extracts relevant information from alarm messages, analyzes historical data, and provides AI-generated insights and recommendations in an easy-to-read HTML format.
 
 # Architecture
 
