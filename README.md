@@ -65,7 +65,7 @@ The diagram shows the following workflow:
 
     ```
     aws cloudformation create-stack --stack-name genai-based-cloud-watch-alerts-insights \
-    --template-body file://cloudformation/cwalarm-gen-ai-insights-email.cfn.json \
+    --template-body file://cloudformation/cwalarm-gen-ai-insights-email-lambda.json \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
     --parameters ParameterKey=pS3DeploymentBucket,ParameterValue=<S3 bucket that contains Lambda zip package> \
 	ParameterKey=pS3DeploymentKey,ParameterValue=<S3 key of the Lambda deployment package (.zip)> \
@@ -92,7 +92,7 @@ The email includes:
 # Customization
 
 To modify the email appearance or content:
-1. Update the HTML code in the `HtmlPart` property in [cwalarm-gen-ai-insights-email.cfn.json](./cloudformation/cwalarm-gen-ai-insights-email.cfn.json)
+1. Update the HTML code in the `HtmlPart` property in [cwalarm-gen-ai-insights-email-lambda.json](./cloudformation/cwalarm-gen-ai-insights-email-lambda.json)
 2. Adjust the Lambda function code to change how data is processed or how the AI model is queried
 3. Modify the Bedrock prompt in the Lambda function to get different types of insights or recommendations
 
